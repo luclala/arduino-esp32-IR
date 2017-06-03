@@ -20,7 +20,6 @@ static const char* NEC_TAG = "NEC";
 
 
 #define RMT_TX_CARRIER_EN    1   /*!< Enable carrier for IR transmitter test with IR led */
-
 #define RMT_CARRIER_FREQ          38750
 #define RMT_CARRIER_DUTY          45
 #define RMT_TX_CHANNEL    RMT_CHANNEL_1     /*!< RMT channel for transmitter */
@@ -43,6 +42,7 @@ static const char* NEC_TAG = "NEC";
 #define rmt_item32_tIMEOUT_US  9500   /*!< RMT receiver timeout value(us) */
 
 #define GPIO_INPUT        GPIO_NUM_4  /*Input that activates the IR tx */
+#define GPIO_LED          GPIO_NUM_27 /*LED output pin 27 */
 
 /*
 * @brief Build register value of waveform for NEC one data bit
@@ -237,27 +237,28 @@ static void rmt_example_nec_tx_task() //void *pvParameters
     nec_tx_init();
     esp_log_level_set(NEC_TAG, ESP_LOG_INFO);
     int nec_tx_num = RMT_TX_DATA_NUM;
-    for(;;) {
-        ESP_LOGI(NEC_TAG, "RMT TX DATA");
-        size_t size = (sizeof(rmt_item32_t) * NEC_DATA_ITEM_NUM * nec_tx_num);
-        //each item represent a cycle of waveform.
-        rmt_item32_t* item = (rmt_item32_t*) malloc(size);
-        int item_num = NEC_DATA_ITEM_NUM * nec_tx_num;
-        memset((void*) item, 0, size);
-        int i, offset = 0;
+    
+    ESP_LOGI(NEC_TAG, "RMT TX DATA");
+    size_t size = (sizeof(rmt_item32_t) * NEC_DATA_ITEM_NUM * nec_tx_num);
+    //each item represent a cycle of waveform.
+    rmt_item32_t* item = (rmt_item32_t*) malloc(size);
+    int item_num = NEC_DATA_ITEM_NUM * nec_tx_num;
+    memset((void*) item, 0, size);
+    int i, offset = 0;
 
-        nec_build_items(RMT_TX_CHANNEL, item);
-        
-        //To send data according to the waveform items.
-        //Serial.print("rmt_write_items");
-        rmt_write_items(RMT_TX_CHANNEL, item, item_num, true);
-        //Wait until sending is done.
-        rmt_wait_tx_done(RMT_TX_CHANNEL);
-        //before we free the data, make sure sending is already done.
-        free(item);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-    }
+    nec_build_items(RMT_TX_CHANNEL, item);
+    
+    //To send data according to the waveform items.
+    //Serial.print("rmt_write_items");
+    rmt_write_items(RMT_TX_CHANNEL, item, item_num, true);
+    //Wait until sending is done.
+    rmt_wait_tx_done(RMT_TX_CHANNEL);
+    //before we free the data, make sure sending is already done.
+    free(item);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+  
     //vTaskDelete(NULL);
+    return;
 }
 
 void setup()
@@ -267,6 +268,8 @@ void setup()
     io_conf.mode = GPIO_MODE_INPUT;  //set as input mode  
     io_conf.pull_up_en = GPIO_PULLUP_ENABLE;  //enable pull-up mode
     gpio_config(&io_conf);
+
+    pinMode(GPIO_LED, OUTPUT); 
 }
 
 void loop()
@@ -274,7 +277,9 @@ void loop()
     
     //Send command when IO4 is low (R30)
     if (!digitalRead(GPIO_INPUT)) {
+      digitalWrite(GPIO_LED, HIGH);
       rmt_example_nec_tx_task();
+      digitalWrite(GPIO_LED, LOW);
     }
       
     
