@@ -18,24 +18,8 @@
 
 static const char* NEC_TAG = "NEC";
 
-//CHOOSE SELF TEST OR NORMAL TEST
-#define RMT_RX_SELF_TEST   0
 
-/******************************************************/
-/*****                SELF TEST:                  *****/
-/*Connect RMT_TX_GPIO_NUM with RMT_RX_GPIO_NUM        */
-/*TX task will send NEC data with carrier disabled    */
-/*RX task will print NEC data it receives.            */
-/******************************************************/
-#if RMT_RX_SELF_TEST
-#define RMT_RX_ACTIVE_LEVEL  1   /*!< Data bit is active high for self test mode */
-#define RMT_TX_CARRIER_EN    0   /*!< Disable carrier for self test mode  */
-#else
-//Test with infrared LED, we have to enable carrier for transmitter
-//When testing via IR led, the receiver waveform is usually active-low.
-#define RMT_RX_ACTIVE_LEVEL  0   /*!< If we connect with a IR receiver, the data is active low */
 #define RMT_TX_CARRIER_EN    1   /*!< Enable carrier for IR transmitter test with IR led */
-#endif
 
 #define RMT_CARRIER_FREQ          38750
 #define RMT_CARRIER_DUTY          45
@@ -107,13 +91,9 @@ static void nec_fill_item_end(rmt_item32_t* item)
 /*
 * @brief Build NEC 32bit waveform.
 */
-static int nec_build_items(int channel, rmt_item32_t* item, int item_num, uint16_t addr, uint16_t cmd_data)
+static int nec_build_items(int channel, rmt_item32_t* item)
 {
-    int i = 0, j = 0;
-    if(item_num < NEC_DATA_ITEM_NUM) {
-        return -1;
-    }
-
+    
     //1st byte 00110000
     nec_fill_item_header(item++);
     nec_fill_item_bit_zero(item++);
@@ -209,16 +189,6 @@ static int nec_build_items(int channel, rmt_item32_t* item, int item_num, uint16
     /*
     i++;
     for(j = 0; j < 16; j++) {
-        if(addr & 0x1) {
-            nec_fill_item_bit_one(item);
-        } else {
-            nec_fill_item_bit_zero(item);
-        }
-        item++;
-        i++;
-        addr >>= 1;
-    }
-    for(j = 0; j < 16; j++) {
         if(cmd_data & 0x1) {
             nec_fill_item_bit_one(item);
         } else {
@@ -230,8 +200,7 @@ static int nec_build_items(int channel, rmt_item32_t* item, int item_num, uint16
     }
     */
     nec_fill_item_end(item);
-    i++;
-    return i;
+    
 }
 
 /*
@@ -279,7 +248,7 @@ static void rmt_example_nec_tx_task() //void *pvParameters
         memset((void*) item, 0, size);
         int i, offset = 0;
 
-        nec_build_items(RMT_TX_CHANNEL, item + offset, item_num - offset, ((~addr) << 8) | addr, cmd);
+        nec_build_items(RMT_TX_CHANNEL, item);
         
         //To send data according to the waveform items.
         //Serial.print("rmt_write_items");
