@@ -236,8 +236,6 @@ static void rmt_example_nec_tx_task() //void *pvParameters
     vTaskDelay(10);
     nec_tx_init();
     esp_log_level_set(NEC_TAG, ESP_LOG_INFO);
-    uint16_t cmd = 0x0;
-    uint16_t addr = 0x11;
     int nec_tx_num = RMT_TX_DATA_NUM;
     for(;;) {
         ESP_LOGI(NEC_TAG, "RMT TX DATA");
